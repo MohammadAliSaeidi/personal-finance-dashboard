@@ -1,20 +1,24 @@
 "use client";
-import { FormEvent } from "react";
+import credentialsLogin from "@/features/login/services/credentialsLogin";
+import ILoginCredentials from "@/types/LoginCredentials.type";
+import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-
-type Inputs = {
-	username: string;
-	password: string;
-};
 
 export default function Login() {
 	const {
 		register,
 		formState: { errors },
 		handleSubmit,
-	} = useForm<Inputs>();
-	const handleOnLoginSubmit = (formData: Inputs) => {
-		console.log(formData);
+	} = useForm<ILoginCredentials>();
+
+	const loginMutation = useMutation({
+		mutationKey: ["login"],
+		mutationFn: (credentials: ILoginCredentials) =>
+			credentialsLogin(credentials),
+	});
+
+	const handleOnLoginSubmit = (credentials: ILoginCredentials) => {
+		loginMutation.mutate(credentials);
 	};
 
 	return (
