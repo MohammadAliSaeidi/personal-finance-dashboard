@@ -1,5 +1,5 @@
 "use client";
-import credentialsLogin from "@/features/login/services/credentialsLogin";
+import credentialsLogin from "@/features/Authentication/services/credentialsLogin";
 import ILoginCredentials from "@/types/LoginCredentials.type";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";

@@ -5,12 +5,10 @@ export function middleware(request: NextRequest) {
 	const token = request.cookies.get("token")?.value;
 
 	// Define paths that should be protected
-	const protectedPaths = ["/test"];
+	const protectedPaths = ["/"];
 
 	// Check if the requested path is protected
-	const isProtectedPath = protectedPaths.some((path) =>
-		request.nextUrl.pathname.startsWith(path)
-	);
+	const isProtectedPath = protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path));
 
 	if (isProtectedPath) {
 		if (!token) {
@@ -35,5 +33,5 @@ export function middleware(request: NextRequest) {
 
 // Optionally, you can specify which routes this middleware applies to
 export const config = {
-	matcher: ["/((?!login).*)"],
+	matcher: ["/((?!login|signup).*)"],
 };
