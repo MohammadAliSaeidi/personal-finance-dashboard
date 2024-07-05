@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 		const hashedPassword = await hashPassword(password);
 		await prisma.user.create({ data: { username: username, password: hashedPassword } });
 
-		const response = getAuthenticateResponse(username);
+		const response = await getAuthenticateResponse(username);
 
 		return response;
 	} catch (err) {

@@ -1,11 +1,11 @@
 import { generateToken } from "./jwt";
 
-export function getAuthenticateResponse(username: string) {
+export async function getAuthenticateResponse(username: string) {
 	const response = new Response(null, {
 		status: 201,
 		statusText: "Signup successful",
 	});
-	const token = generateToken(username);
+	const token = await generateToken({ username: username });
 
 	response.headers.set(
 		"Set-Cookie",
@@ -13,4 +13,6 @@ export function getAuthenticateResponse(username: string) {
 			process.env.NODE_ENV !== "development" ? "; Secure" : ""
 		}`
 	);
+
+	return response;
 }

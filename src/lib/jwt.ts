@@ -1,23 +1,34 @@
-import jwt from "jsonwebtoken";
+import Token from "@/types/token.type";
+import { SignJWT, jwtVerify } from "jose";
 
-const SECRET_KEY = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET;
 
-export function verifyToken(token: string) {
+if (!JWT_SECRET) {
+	throw new Error("JWT_SECRET is not set in environment variables");
+}
+
+const secret = new TextEncoder().encode(JWT_SECRET);
+
+export async function generateToken(payload: Token) {
 	try {
-		if (SECRET_KEY) {
-			return jwt.verify(token, SECRET_KEY);
-		} else {
-			throw new Error("Could not verify token. because the secret key is not available");
-		}
+		const token = await new SignJWT({ ...payload })
+			.setProtectedHeader({ alg: "HS256" })
+			.setExpirationTime("1 h")
+			.sign(secret);
+
+		return token;
 	} catch (error) {
-		throw new Error("Invalid token");
+		console.error("Error generating token:", error);
+		throw new Error("Failed to generate token");
 	}
 }
 
-export function generateToken(username: string) {
-	if (SECRET_KEY) {
-		jwt.sign({ username: username }, SECRET_KEY, { expiresIn: "1h" });
-	} else {
-		throw new Error("Could not generate token. because the secret key is not available");
+export async function verifyToken(token: string) {
+	try {
+		const decodedToken = await jwtVerify<Token>(token, secret);
+		return decodedToken;
+	} catch (error) {
+		console.error("Error verifying token:", error);
+		throw new Error("Invalid token");
 	}
 }

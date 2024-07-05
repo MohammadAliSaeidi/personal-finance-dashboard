@@ -1,37 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "./lib/jwt";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
 	const token = request.cookies.get("token")?.value;
-
-	// Define paths that should be protected
 	const protectedPaths = ["/"];
-
-	// Check if the requested path is protected
-	const isProtectedPath = protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path));
+	const isProtectedPath = protectedPaths.some((path) => request.nextUrl.pathname.endsWith(path));
 
 	if (isProtectedPath) {
+		console.log("token", token);
+
 		if (!token) {
-			// Redirect to login if there's no token
 			return NextResponse.redirect(new URL("/login", request.url));
 		}
 
 		try {
-			// Verify the token
-			verifyToken(token);
-			// If verification is successful, allow the request to continue
+			const tokenData = await verifyToken(token);
+
+			// Check token expiration
+			const currentTimestamp = Math.floor(Date.now() / 1000);
+			if (tokenData.payload.exp && tokenData.payload.exp < currentTimestamp) {
+				console.log("Token has expired");
+				return NextResponse.redirect(new URL("/login", request.url));
+			}
+
+			// Token is valid and not expired
 			return NextResponse.next();
 		} catch (error) {
-			// If verification fails, redirect to login
+			console.error("Token verification failed:", error);
 			return NextResponse.redirect(new URL("/login", request.url));
 		}
 	}
 
-	// For non-protected routes, allow the request to continue
 	return NextResponse.next();
 }
 
-// Optionally, you can specify which routes this middleware applies to
 export const config = {
-	matcher: ["/((?!login|signup).*)"],
+	matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };

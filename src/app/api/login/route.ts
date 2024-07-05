@@ -1,5 +1,5 @@
 import { getAuthenticateResponse } from "@/lib/authenticate";
-import { hashPassword } from "@/lib/passwordHash";
+import { comparePassword, hashPassword } from "@/lib/passwordHash";
 import prisma from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -14,7 +14,13 @@ export async function POST(request: Request) {
 		}
 
 		const hashedPassword = await hashPassword(password);
-		const userInDB = await prisma.user.findFirst({ where: { username: username, password: hashedPassword } });
+		const isPasswordCorrect = await comparePassword(password, hashedPassword);
+
+		if (!isPasswordCorrect) {
+			return new Response(null, { status: 401, statusText: "User not found or not authenticated" });
+		}
+
+		const userInDB = await prisma.user.findFirst({ where: { username: username } });
 
 		if (userInDB === null) {
 			return new Response(null, { status: 401, statusText: "User not found or not authenticated" });
