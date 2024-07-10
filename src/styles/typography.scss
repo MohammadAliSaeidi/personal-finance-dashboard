@@ -1,0 +1,18 @@
+.text-with-lines-on-side {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	text-align: center;
+
+	&:before,
+	&:after {
+		content: "";
+		border-top: 2px solid;
+		margin: 0 1rem 0 0;
+		flex: 1 0 20px;
+	}
+
+	&:after {
+		margin: 0 0 0 1rem;
+	}
+}

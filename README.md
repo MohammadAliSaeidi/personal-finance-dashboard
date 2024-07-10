@@ -1,0 +1,4 @@
+-   The importance of shapes and colors for inducting the feeling of trustworthy and modernity.
+    -   color: blue
+    -   shapes: rounded
+    -   simple UI design

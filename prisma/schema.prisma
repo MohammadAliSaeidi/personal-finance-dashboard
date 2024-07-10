@@ -14,7 +14,19 @@ datasource db {
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
-  username String @unique
+  id       Int       @id @default(autoincrement())
+  username String    @unique
   password String
+  name     String?
+  expenses Expense[]
+}
+
+model Expense {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  amount      Int
+  category    String?
+  description String?
+  date        DateTime?
+  user        User     @relation(fields: [userId], references: [id])
 }
