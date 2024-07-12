@@ -1,119 +1,52 @@
-"use client";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { useMutation } from "@tanstack/react-query";
-import { RegisterExpenseFormSchema, RegisterExpenseFormSchemaType } from "@/features/RegisterExpense/formSchema";
-import registerExpense from "@/features/RegisterExpense/services/registerExpense";
+import fetchExpenseCategories from "@/features/RegisterExpense/services/fetchExpenseCategories";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import ExpenseForm from "@/features/RegisterExpense/components/ExpenseForm";
+import axios from "axios";
+import { verifyToken } from "@/lib/jwt";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import prisma from "@/lib/prisma";
 
-export default function Home() {
-	const form = useForm<RegisterExpenseFormSchemaType>({
-		resolver: zodResolver(RegisterExpenseFormSchema),
-		defaultValues: {
-			amount: 0,
-		},
-	});
-	const registerExpenseMutation = useMutation({
-		mutationKey: ["registerExpense"],
-		mutationFn: (expenseData: RegisterExpenseFormSchemaType) => registerExpense(expenseData),
-	});
+export default async function Home() {
+	const getCategories = async (): Promise<string[]> => {
+		"use server";
+		try {
+			const cookieStore = cookies();
+			const token = cookieStore.get("token");
 
-	const handleOnExpenseSubmit = (expenseData: RegisterExpenseFormSchemaType) => {
-		registerExpenseMutation.mutate(expenseData);
+			if (!token) {
+				redirect("/login");
+			}
+
+			const {
+				payload: { username },
+			} = await verifyToken(token.value);
+
+			const queryResult: any[] = await prisma.$queryRaw`
+				SELECT DISTINCT CATEGORY FROM PUBLIC."Expense" E 
+				INNER JOIN public."User" U ON U.id = E."userId"
+				WHERE U.username = ${username} AND E.category NOTNULL`;
+
+			const categories = queryResult.map((obj) => obj.category);
+			return categories satisfies string[];
+		} catch {
+			return [];
+		}
 	};
 
+	const categories = await getCategories();
+
 	return (
-		<main className="max-w-sm p-6 mx-auto">
-			<Form {...form}>
-				<form className="flex flex-col gap-6" onSubmit={form.handleSubmit(handleOnExpenseSubmit)}>
-					<FormField
-						control={form.control}
-						name={"amount"}
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Amount</FormLabel>
-								<FormControl>
-									<Input type="number" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name={"category"}
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Category</FormLabel>
-								<FormControl>
-									<Input type="text" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name={"description"}
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Description</FormLabel>
-								<FormControl>
-									<Textarea maxLength={100} {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-
-					<FormField
-						control={form.control}
-						name="date"
-						render={({ field }) => (
-							<FormItem className="flex flex-col">
-								<FormLabel>Date</FormLabel>
-								<Popover>
-									<PopoverTrigger asChild>
-										<FormControl>
-											<Button
-												variant={"outline"}
-												className={cn(
-													"w-[240px] pl-3 text-left font-normal",
-													!field.value && "text-muted-foreground"
-												)}
-											>
-												{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-												<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-											</Button>
-										</FormControl>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={field.value}
-											onSelect={field.onChange}
-											disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-
-					<Button type="submit" />
-				</form>
-			</Form>
+		<main className="min-h-screen h-fit flex items-center justify-center overflow-y-scroll py-6">
+			<Card className={"max-w-sm flex-1"}>
+				<CardHeader>
+					<CardTitle>Create expense</CardTitle>
+					<CardDescription>create expense and what you have spend</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<ExpenseForm expenseCategories={categories} />
+				</CardContent>
+			</Card>
 		</main>
 	);
 }

@@ -4,10 +4,19 @@ import { z } from "zod";
 const checkSqlInjection = (val?: string) => !sqlInjectionRegex.test(val ?? "");
 
 export const RegisterExpenseFormSchema = z.object({
-	amount: z.coerce.number({ required_error: "please enter the expense amount" }).int().nonnegative(),
-	category: z.string().optional().refine(checkSqlInjection, {
-		message: "SQL queries are not allowed :)",
-	}),
+	amount: z.coerce
+		.number({ required_error: "please enter the expense amount" })
+		.int()
+		.positive({ message: "please enter the expense amount" }),
+	category: z
+		.array(
+			z.object({
+				category: z.string().refine(checkSqlInjection, {
+					message: "SQL queries are not allowed :)",
+				}),
+			})
+		)
+		.optional(),
 	description: z.string().optional().refine(checkSqlInjection, {
 		message: "SQL queries are not allowed :)",
 	}),
