@@ -1,14 +1,15 @@
-import { sqlInjectionRegex } from "@/lib/utils";
+import { checkSqlInjection, sqlInjectionRegex } from "@/lib/utils";
 import { z } from "zod";
 
-const checkSqlInjection = (val?: string) => !sqlInjectionRegex.test(val ?? "");
+// const emptyInput = (val?: string) => /^\s*$/.test(val ?? "");
 
 export const RegisterExpenseFormSchema = z.object({
 	amount: z.coerce
 		.number({ required_error: "please enter the expense amount" })
 		.int()
 		.positive({ message: "please enter the expense amount" }),
-	category: z
+	category: z.string().refine(checkSqlInjection, { message: "SQL queries are not allowed :)" }).optional(),
+	categories: z
 		.array(
 			z.object({
 				category: z.string().refine(checkSqlInjection, {

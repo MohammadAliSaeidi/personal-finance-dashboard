@@ -17,8 +17,18 @@ export async function GET() {
 			payload: { username },
 		} = await verifyToken(token.value);
 
-		const queryResult: any[] =
-			await prisma.$queryRaw`SELECT DISTINCT CATEGORY FROM PUBLIC."Expense" E INNER JOIN public."User" U ON U.id = E."userId" WHERE U.username = ${username} AND E.category NOTNULL`;
+		const userInDB = await prisma.user.findFirst({ where: { username: username } });
+
+		const queryResult: any[] = await prisma.$queryRaw`
+			SELECT DISTINCT c.id, c.name
+			FROM "Category" c
+			JOIN "ExpenseCategory" ec ON c.id = ec."categoryId"
+			JOIN "Expense" e ON ec."expenseId" = e.id
+			WHERE e."userId" = ${userInDB}
+			ORDER BY c.name ASC
+		`;
+
+		console.log(queryResult);
 
 		const categories = queryResult.map((obj) => obj.category);
 

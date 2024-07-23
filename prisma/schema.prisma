@@ -22,11 +22,25 @@ model User {
 }
 
 model Expense {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  amount      Int
-  category    String?
-  description String?
-  date        DateTime?
-  user        User     @relation(fields: [userId], references: [id])
+  id              Int               @id @default(autoincrement())
+  userId          Int
+  amount          Int
+  description     String?
+  date            DateTime?
+  user            User              @relation(fields: [userId], references: [id])
+  ExpenseCategory ExpenseCategory[]
+}
+
+model Category {
+  id              Int               @id @default(autoincrement())
+  name            String
+  ExpenseCategory ExpenseCategory[]
+}
+
+model ExpenseCategory {
+  id         Int      @id @default(autoincrement())
+  expenseId  Int
+  categoryId Int
+  expense    Expense  @relation(fields: [expenseId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
 }

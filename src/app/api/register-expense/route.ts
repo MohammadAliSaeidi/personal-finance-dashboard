@@ -1,3 +1,4 @@
+import { ExpenseDataSchema, ExpenseDataType } from "@/features/RegisterExpense/ExpenseDataSchema";
 import { RegisterExpenseFormSchema } from "@/features/RegisterExpense/formSchema";
 import { verifyToken } from "@/lib/jwt";
 import prisma from "@/lib/prisma";
@@ -14,13 +15,13 @@ export async function POST(request: Request) {
 		}
 
 		const decodedToken = await verifyToken(token.value);
+		const expenseData: ExpenseDataType = await request.json();
 
-		const { amount, description, date, category } = await request.json();
-
-		let validatedInput;
+		// validate input
 		try {
-			validatedInput = RegisterExpenseFormSchema.parse({ amount, description, date, category });
-		} catch {
+			ExpenseDataSchema.parse(expenseData);
+		} catch (error) {
+			console.log(error);
 			return new Response(null, {
 				status: 400,
 				statusText: "invalid request fields",
@@ -36,14 +37,50 @@ export async function POST(request: Request) {
 			});
 		}
 
-		const createExpense = await prisma.expense.create({
-			data: {
-				amount: validatedInput.amount,
-				category: validatedInput.category,
-				date: validatedInput.date,
-				description: validatedInput.description,
-				userId: userInDB.id,
-			},
+		const t = await prisma.$transaction(async (tx) => {
+			const expense = await tx.expense.create({
+				data: {
+					amount: expenseData.amount,
+					date: expenseData.date,
+					description: expenseData.description,
+					userId: userInDB.id,
+				},
+			});
+
+			const existingCategories = await tx.category.findMany({
+				where: {
+					name: {
+						in: expenseData.categories,
+					},
+				},
+			});
+
+			const existingCategoryNames = existingCategories.map((cat) => cat.name);
+			const newCategoryNames = expenseData.categories?.filter((name) => !existingCategoryNames.includes(name));
+
+			if (newCategoryNames && newCategoryNames.length > 0) {
+				await tx.category.createMany({
+					data: newCategoryNames.map((name) => ({ name })),
+					skipDuplicates: true,
+				});
+			}
+
+			const allCategories = await tx.category.findMany({
+				where: {
+					name: {
+						in: expenseData.categories,
+					},
+				},
+			});
+
+			await tx.expenseCategory.createMany({
+				data: allCategories.map((category) => ({
+					expenseId: expense.id,
+					categoryId: category.id,
+				})),
+			});
+
+			return expense;
 		});
 
 		return new Response(null, { status: 201, statusText: "Expense added successfully" });

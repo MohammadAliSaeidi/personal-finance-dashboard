@@ -4,7 +4,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useForm, UseFormRegister } from "react-hook-form";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,11 +12,10 @@ import { format } from "date-fns";
 import { RegisterExpenseFormSchema, RegisterExpenseFormSchemaType } from "@/features/RegisterExpense/formSchema";
 import registerExpense from "@/features/RegisterExpense/services/registerExpense";
 import Loading from "@/components/ui/Loading/Loading";
-import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { CommandList } from "cmdk";
+import { CalendarIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useState } from "react";
+import { ExpenseDataType } from "../../ExpenseDataSchema";
 
 type ExpenseFormProps = {
 	expenseCategories: string[];
@@ -30,24 +29,51 @@ export default function ExpenseForm({ expenseCategories }: ExpenseFormProps) {
 		},
 	});
 
-	const { fields, append } = useFieldArray({ name: "category", control: form.control });
-
-	useEffect(() => {
-		expenseCategories.map((category) => append({ category: category }));
-	}, [expenseCategories, append]);
-
 	const onRegisterExpenseSuccess = () => {
 		form.reset();
 	};
 
 	const registerExpenseMutation = useMutation({
 		mutationKey: ["registerExpense"],
-		mutationFn: (expenseData: RegisterExpenseFormSchemaType) => registerExpense(expenseData),
+		mutationFn: (expenseData: ExpenseDataType) => registerExpense(expenseData),
 		onSuccess: () => onRegisterExpenseSuccess(),
 	});
 
 	const handleOnExpenseSubmit = (expenseData: RegisterExpenseFormSchemaType) => {
-		registerExpenseMutation.mutate(expenseData);
+		const refinedCategories: string[] = expenseData.categories?.map((category) => category.category) ?? [];
+		let refinedExpenseData: ExpenseDataType = {
+			amount: expenseData.amount,
+			categories: refinedCategories,
+			date: expenseData.date,
+			description: expenseData.description,
+		};
+
+		const trimmedCategory = expenseData.category?.trim() ?? "";
+		if (trimmedCategory?.length > 0) {
+			refinedExpenseData = {
+				...refinedExpenseData,
+				categories: [...refinedCategories, trimmedCategory],
+			};
+		}
+
+		console.log(refinedExpenseData);
+
+		registerExpenseMutation.mutate(refinedExpenseData);
+	};
+
+	const handleOnCategoryChange = (selected: boolean, category: string) => {
+		const { categories } = form.getValues();
+		if (selected) {
+			if (categories) {
+				form.setValue("categories", [...categories, { category: category }]);
+			}
+		}
+	};
+
+	const Categories = () => {
+		return expenseCategories.map((category) => {
+			return <CategoryItem onChange={handleOnCategoryChange} fieldName={category} key={category} />;
+		});
 	};
 
 	return (
@@ -71,9 +97,22 @@ export default function ExpenseForm({ expenseCategories }: ExpenseFormProps) {
 						</FormItem>
 					)}
 				/>
-				{expenseCategories.map((expenseCategory) => {
-					return <input type="checkbox" key={expenseCategory} {...form.register} />;
-				})}
+				<FormField
+					control={form.control}
+					name={"category"}
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Category</FormLabel>
+							<FormControl>
+								<Input type="text" {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<div className="flex flex-row">
+					<Categories />
+				</div>
 				<FormField
 					control={form.control}
 					name={"description"}
@@ -129,6 +168,35 @@ export default function ExpenseForm({ expenseCategories }: ExpenseFormProps) {
 				</Button>
 			</form>
 		</Form>
+	);
+}
+
+type CategoryItemProps = {
+	fieldName: string;
+	// onChange: (selected: boolean, category: string) => void;
+	register: UseFormRegister<RegisterExpenseFormSchemaType>;
+};
+
+function CategoryItem({ fieldName, register }: CategoryItemProps) {
+	const [checked, setChecked] = useState(false);
+
+	const handleOnCheckboxChange = () => {
+		// onChange(!checked, fieldName);
+		setChecked((prevVal) => !prevVal);
+	};
+
+	return (
+		<>
+			<input type="checkbox" {...register} />
+			<div
+				className={`border px-2.5 py-1.5 select-none transition-all duration-100 cursor-pointer rounded-full text-sm ${
+					checked ? "bg-black text-white" : "bg-transparent text-gray-400 border-gray-400"
+				}`}
+				onClick={() => handleOnCheckboxChange()}
+			>
+				{fieldName}
+			</div>
+		</>
 	);
 }
 
